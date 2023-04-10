@@ -16,18 +16,27 @@
   <meta name="author" content="XiaoSiyuan">
   <meta name="keywords" content="">
   
-    <meta name="description" content="UserService 、 OrderService">
+    <meta name="description" content="背景bean在创建过程中会出现各种各样的循环依赖。了解spring如何用三级缓存机制解决循环依赖，解决spring没有解决的循环依赖。所以需要了解bean的生命周期原理。 出现属性的循环依赖时，bean的生命周期spring用三级缓存机制来解决属性的循环依赖。 以 UserService 和 OrderService 出现属性的循环依赖为例子。 示例代码1234567891011121314@Co">
 <meta property="og:type" content="article">
 <meta property="og:title" content="spring中bean的生命周期">
 <meta property="og:url" content="http://example.com/2023/03/06/spring/spring%E4%B8%ADbean%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F/index.html">
 <meta property="og:site_name" content="Hexo">
-<meta property="og:description" content="UserService 、 OrderService">
+<meta property="og:description" content="背景bean在创建过程中会出现各种各样的循环依赖。了解spring如何用三级缓存机制解决循环依赖，解决spring没有解决的循环依赖。所以需要了解bean的生命周期原理。 出现属性的循环依赖时，bean的生命周期spring用三级缓存机制来解决属性的循环依赖。 以 UserService 和 OrderService 出现属性的循环依赖为例子。 示例代码1234567891011121314@Co">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109004000w4gxqi.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109525000v8m269.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109706000jir3bm.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109854000kbbgiz.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681112758000cnkzlf.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681113361000c6xc8m.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681114190000rw66ry.png">
+<meta property="og:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681114410000wq7eq8.png">
 <meta property="article:published_time" content="2023-03-06T13:35:22.000Z">
-<meta property="article:modified_time" content="2023-04-09T11:06:10.961Z">
+<meta property="article:modified_time" content="2023-04-10T11:31:19.521Z">
 <meta property="article:author" content="XiaoSiyuan">
 <meta property="article:tag" content="spring">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109004000w4gxqi.png">
   
   
   
@@ -220,7 +229,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          24 字
+          2.6k 字
         
       </span>
     
@@ -231,7 +240,7 @@
         
         
         
-          1 分钟
+          22 分钟
         
       </span>
     
@@ -274,7 +283,60 @@
             
               <div class="markdown-body">
                 
-                <p>UserService 、 OrderService</p>
+                <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>bean在创建过程中会出现各种各样的循环依赖。了解spring如何用三级缓存机制解决循环依赖，解决spring没有解决的循环依赖。所以需要了解bean的生命周期原理。</p>
+<h2 id="出现属性的循环依赖时，bean的生命周期"><a href="#出现属性的循环依赖时，bean的生命周期" class="headerlink" title="出现属性的循环依赖时，bean的生命周期"></a>出现属性的循环依赖时，bean的生命周期</h2><p>spring用三级缓存机制来解决属性的循环依赖。</p>
+<p>以 UserService 和 OrderService 出现属性的循环依赖为例子。</p>
+<h3 id="示例代码"><a href="#示例代码" class="headerlink" title="示例代码"></a>示例代码</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-meta">@Component</span>  <br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">OrderService</span> &#123;  <br>  <br>   <span class="hljs-meta">@Autowired</span><br>   UserService userService;<br>&#125;<br><br><span class="hljs-meta">@Component</span>  <br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">UserService</span> &#123;  <br>  <br>   <span class="hljs-meta">@Autowired</span><br>   OrderService orderService;<br>&#125;<br><br></code></pre></td></tr></table></figure>
+
+
+<h3 id="orderService-添加入set集合"><a href="#orderService-添加入set集合" class="headerlink" title="orderService 添加入set集合"></a>orderService 添加入set集合</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Set&lt;String&gt; singletonsCurrentlyInCreation =  <br>      Collections.newSetFromMap(<span class="hljs-keyword">new</span> <span class="hljs-title class_">ConcurrentHashMap</span>&lt;&gt;(<span class="hljs-number">16</span>));<br></code></pre></td></tr></table></figure>
+
+<p>singletonsCurrentlyInCreation 存储正在创建的 beanName ，后面用来检查是否出现了循环依赖。</p>
+<p>这里把 “orderService” 添加进这集合。</p>
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109004000w4gxqi.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h3 id="创建bean的普通对象"><a href="#创建bean的普通对象" class="headerlink" title="创建bean的普通对象"></a>创建bean的普通对象</h3><p>createBeanInstance 中推断构造函数，然后实例化bean并返回</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs java">instanceWrapper = createBeanInstance(beanName, mbd, args);<br></code></pre></td></tr></table></figure>
+
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109525000v8m269.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h3 id="将-orderService-添加到三级缓存中"><a href="#将-orderService-添加到三级缓存中" class="headerlink" title="将 orderService 添加到三级缓存中"></a>将 orderService 添加到三级缓存中</h3><p>三级缓存 singletonFactories 存储的是一个lambda 表达式。这个表达式用来存储 生成 orderService 对象的过程。后面出现循环依赖的时候会用到</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Map&lt;String, ObjectFactory&lt;?&gt;&gt; singletonFactories = <span class="hljs-keyword">new</span> <span class="hljs-title class_">HashMap</span>&lt;&gt;(<span class="hljs-number">16</span>);<br></code></pre></td></tr></table></figure>
+
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109706000jir3bm.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h3 id="orderService-属性填充"><a href="#orderService-属性填充" class="headerlink" title="orderService 属性填充"></a>orderService 属性填充</h3><p>populateBean 会给 orderService 做属性填充，把 UserService 填充进去。在这里，会进入 UserService 的生命周期。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs java">populateBean(beanName, mbd, instanceWrapper);<br></code></pre></td></tr></table></figure>
+
+
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681109854000kbbgiz.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h3 id="三级缓存中生成-orderService"><a href="#三级缓存中生成-orderService" class="headerlink" title="三级缓存中生成 orderService"></a>三级缓存中生成 orderService</h3><p>UserService 的生命周期的步骤同上 orderService 的生命周期。<br>这里直接看到给 UserService 的bean生命周期中，对 字段 orderService 的属性注入过程。</p>
+<p>这里需要把 orderService 从三级缓存中获取出来，然后放入二级缓存，如果需要AOP 这里会提前进行 AOP。</p>
+<p>（注：这里二级缓存是为了，防止 UserService 出现多个循环依赖时，不生成多个代理对象。而存在，这里就不放开解释了。）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs java">...<br><span class="hljs-comment">// 从 三级缓存 singletonFactories 里面找  </span><br><span class="hljs-comment">// 获取到 lambda 表达式  </span><br>ObjectFactory&lt;?&gt; singletonFactory = <span class="hljs-built_in">this</span>.singletonFactories.get(beanName);  <br><span class="hljs-keyword">if</span> (singletonFactory != <span class="hljs-literal">null</span>) &#123;  <br>   <span class="hljs-comment">// 执行 lambda 表达式  </span><br>   singletonObject = singletonFactory.getObject();  <br>   <span class="hljs-comment">// 把结果放到 二级缓存 earlySingletonObjects 里面  </span><br>   <span class="hljs-built_in">this</span>.earlySingletonObjects.put(beanName, singletonObject);<br>...<br></code></pre></td></tr></table></figure>
+
+
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681112758000cnkzlf.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<p>这里从三级缓存中获取到 orderService 并完成 UserService 的生命周期。</p>
+<h3 id="orderService-的AOP阶段"><a href="#orderService-的AOP阶段" class="headerlink" title="orderService 的AOP阶段"></a>orderService 的AOP阶段</h3><p>这里如果循环依赖提前进行了AOP 就不会再进行AOP获取代理对象了。</p>
+<p>earlyProxyReferences 缓存的就是 执行lambda 表达式获取的 bean</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Map&lt;Object, Object&gt; earlyProxyReferences = <span class="hljs-keyword">new</span> <span class="hljs-title class_">ConcurrentHashMap</span>&lt;&gt;(<span class="hljs-number">16</span>);<br></code></pre></td></tr></table></figure>
+
+
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681113361000c6xc8m.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h3 id="orderService-放入单例池"><a href="#orderService-放入单例池" class="headerlink" title="orderService 放入单例池"></a>orderService 放入单例池</h3><p>因为出现了循环依赖所以从二级缓存中获取bean，放入单例池</p>
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681114190000rw66ry.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h3 id="把-orderService-从-set集合中删除"><a href="#把-orderService-从-set集合中删除" class="headerlink" title="把 orderService 从 set集合中删除"></a>把 orderService 从 set集合中删除</h3><p>orderService 的生命周期结束，已经不是正在创建的 bean。所以这里把 orderService 从 set集合中 remove。</p>
+<p><img src="https://fastly.jsdelivr.net/gh/GitHubXiaoSiyuan/images@main/2023/1681114410000wq7eq8.png" srcset="/img/loading.gif" lazyload alt="gh"></p>
+<h2 id="构造方法的循环依赖解决"><a href="#构造方法的循环依赖解决" class="headerlink" title="构造方法的循环依赖解决"></a>构造方法的循环依赖解决</h2><p>构造方法的循环依赖，spring的三级缓存机制是解决不了的</p>
+<p>因为卡在了创建普通对象，构造方法执行不了，普通对象都创建不成功</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-meta">@Component</span>  <br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DemoAService</span> &#123;  <br>  <br>   <span class="hljs-keyword">public</span>  <span class="hljs-title function_">DemoAService</span><span class="hljs-params">(DemoBService demoBService)</span> &#123;<br>   <br>   &#125;<br>  <br>&#125;<br><br><span class="hljs-meta">@Component</span>  <br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DemoBService</span> &#123;  <br>  <br>   <span class="hljs-keyword">public</span>  <span class="hljs-title function_">DemoBService</span><span class="hljs-params">(DemoAService demoAService)</span> &#123;<br>   <br>   &#125; <br>  <br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>但是 加上 @Lazy 注解可以解决</p>
+<p>@Lazy 不真正创建对象，返回一个代理对象。用的时候才会创建对象。<br>普通对象创建不成功，不影响</p>
+<p>这里加上一个 @Lazy 就能解决</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-meta">@Component</span>  <br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DemoAService</span> &#123;  <br><br>	<span class="hljs-meta">@Lazy</span><br>	<span class="hljs-keyword">public</span>  <span class="hljs-title function_">DemoAService</span><span class="hljs-params">(DemoBService demoBService)</span> &#123;<br>	   <br>	&#125;<br>  <br>&#125;<br><br><span class="hljs-meta">@Component</span>  <br><span class="hljs-keyword">public</span> <span class="hljs-keyword">class</span> <span class="hljs-title class_">DemoBService</span> &#123;  <br><br>   	<span class="hljs-keyword">public</span>  <span class="hljs-title function_">DemoBService</span><span class="hljs-params">(DemoAService demoAService)</span> &#123;<br>	   <br>	&#125;<br>  <br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="async-注解的循环依赖"><a href="#async-注解的循环依赖" class="headerlink" title="async 注解的循环依赖"></a>async 注解的循环依赖</h2><p>同上。</p>
+<p>给属性加上 @Lazy 之后，不存在循环依赖了。</p>
+<p>加上 @Lazy 创建代理对象，执行的时候才会真正的创建对象。</p>
 
                 
               </div>
@@ -365,12 +427,18 @@
                   <article class="post-prev col-6">
                     
                     
+                      <a href="/2023/03/11/spring/spring%E4%B8%AD%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%8E%9F%E7%90%86/" title="spring中事务的原理">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">spring中事务的原理</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
                   </article>
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2023/03/03/spring/spring%E7%9A%84beanName%E8%A7%84%E5%88%99/" title="spring的beanName规则">
-                        <span class="hidden-mobile">spring的beanName规则</span>
+                      <a href="/2023/03/05/spring/spring%E4%B8%AD%E7%9A%84%E6%89%AB%E6%8F%8F%E6%9C%BA%E5%88%B6/" title="spring中的扫描机制">
+                        <span class="hidden-mobile">spring中的扫描机制</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
